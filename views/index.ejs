@@ -162,33 +162,6 @@ function updateHiddenTextarea() {
   hiddenBody.value = editor.innerHTML;
 }
 
-// Process content before form submission
-function processContent() {
-  const tempDiv = document.createElement('div');
-  tempDiv.innerHTML = editor.innerHTML;
-  
-  const images = tempDiv.getElementsByTagName('img');
-  const imagesArray = Array.from(images);
-  
-  imagesArray.forEach(img => {
-    const imageData = {
-      src: img.src,
-      alt: img.alt || '',
-      width: img.width || '',
-      height: img.height || ''
-    };
-    
-    const imageIndex = ImageStore.add(imageData);
-    const placeholder = document.createElement('span');
-    placeholder.textContent = `<IMG:${imageIndex}>`;
-    img.parentNode.replaceChild(placeholder, img);
-  });
-  
-  return {
-    content: tempDiv.innerHTML,
-    images: ImageStore.images
-  };
-}
 
 // Handle form submission
 publishForm.addEventListener('submit', (e) => {
@@ -210,20 +183,6 @@ publishForm.addEventListener('submit', (e) => {
 // File upload handling
 uploadButton.addEventListener('click', () => {
   fileInput.click();
-});
-
-fileInput.addEventListener('change', (e) => {
-  const file = e.target.files[0];
-  if (file && file.type.startsWith('image/')) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      document.execCommand('insertImage', false, e.target.result);
-      updateHiddenTextarea();
-      console.log("nig")
-    };
-    reader.readAsDataURL(file);
-  }
-  fileInput.value = '';
 });
 
 // Editor event listeners
@@ -249,7 +208,7 @@ const ImageUploader = {
       throw new Error('File size too large');
     }
 
-    // Create FormData
+    // Create FormData with raw file
     const formData = new FormData();
     formData.append('image', file);
 
@@ -272,7 +231,7 @@ const ImageUploader = {
   }
 };
 
-// Modified file input handler
+// File upload handling
 fileInput.addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
@@ -283,21 +242,25 @@ fileInput.addEventListener('change', async (e) => {
 
     const imageUrl = await ImageUploader.uploadImage(file);
     
-    // Insert image into editor
+    // Create image element with server URL
     const img = document.createElement('img');
     img.src = imageUrl;
     img.style.maxWidth = '100%';
     
-    // Use range if available, otherwise append to end
+    // Get current selection
     const selection = window.getSelection();
-    const range = selection.getRangeAt(0);
-    range.insertNode(img);
-    
-    // Move cursor after image
-    range.setStartAfter(img);
-    range.setEndAfter(img);
-    selection.removeAllRanges();
-    selection.addRange(range);
+    if (selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      range.deleteContents();
+      range.insertNode(img);
+      range.setStartAfter(img);
+      range.setEndAfter(img);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    } else {
+      // If no selection, append to editor
+      editor.appendChild(img);
+    }
 
     updateHiddenTextarea();
   } catch (error) {
@@ -311,6 +274,40 @@ fileInput.addEventListener('change', async (e) => {
     `;
     fileInput.value = '';
   }
+});
+editor.addEventListener('paste', async (e) => {
+  e.preventDefault();
+
+  const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+
+  for (const item of items) {
+    if (item.type.indexOf('image') === 0) {
+      const file = item.getAsFile();
+      try {
+        uploadButton.disabled = true;
+        const imageUrl = await ImageUploader.uploadImage(file);
+        
+        const img = document.createElement('img');
+        img.src = imageUrl;
+        img.style.maxWidth = '100%';
+        
+        const selection = window.getSelection();
+        const range = selection.getRangeAt(0);
+        range.deleteContents();
+        range.insertNode(img);
+        console.log(imageUrl);
+      } catch (error) {
+        alert(`Error uploading pasted image: ${error.message}`);
+      } finally {
+        uploadButton.disabled = false;
+      }
+    } else if (item.type === 'text/plain') {
+      item.getAsString((text) => {
+        document.execCommand('insertText', false, text);
+      });
+    }
+  }
+  updateHiddenTextarea();
 });
 
 // Modified process content function
