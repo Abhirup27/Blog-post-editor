@@ -10,12 +10,14 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "cheerio": "^1.0.0",
     "dotenv": "^16.4.5",
     "ejs": "^3.1.10",
     "express": "^4.21.1",
     "json": "^11.0.0",
     "multer": "^1.4.5-lts.1",
     "postcss": "^8.4.47",
+    "sanitize-html": "^2.13.1",
     "tailwindcss": "^3.4.14"
   }
 }
