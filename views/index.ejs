@@ -248,6 +248,7 @@ const ImageUploader = {
       }
 
       const data = await response.json();
+      //console.log(data.url);
       return data.url;
     } catch (error) {
       console.error('Upload error:', error);
@@ -271,11 +272,12 @@ fileInput.addEventListener('change', async (e) => {
     const img = document.createElement('img');
     img.src = imageUrl;
     img.style.maxWidth = '100%';
-    
+    //console.log(imageUrl);
     // Get current selection
     const selection = window.getSelection();
     if (selection.rangeCount > 0) {
       const range = selection.getRangeAt(0);
+      console.log(range);
       range.deleteContents();
       range.insertNode(img);
       range.setStartAfter(img);
@@ -346,6 +348,8 @@ function processContent() {
   imagesArray.forEach(img => {
     // Only store images that have been properly uploaded
     if (img.src.startsWith('data:') || img.src.startsWith(window.location.origin)) {
+
+      console.log(window.location.origin);
       const imageData = {
         src: img.src,
         alt: img.alt || '',
